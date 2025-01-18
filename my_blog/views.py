@@ -2,10 +2,11 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.urls import reverse
 from my_blog.models import Post, AboutUs
-from my_blog.forms import ContactForm
+from my_blog.forms import ContactForm, RegisterForm
 from django.http import Http404
 import logging
 from django.core.paginator import Paginator
+from django.contrib import messages
 
 # Create your views here.
 
@@ -71,3 +72,15 @@ def about(request):
     else:
         about_content = about_content.content
     return render(request=request, template_name='blog/about.html', context={'about_content': about_content})
+
+def register_view(request):
+    form = RegisterForm()
+    if request.method == 'POST':
+        form = RegisterForm(data=request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.set_password(form.cleaned_data['password'])  # hash the password
+            user.save()  # user data is created
+            messages.success(request, 'Registration successful! You can now log in.')
+            print("Registration Successful")
+    return render(request=request, template_name='blog/register.html', context={'form': form})

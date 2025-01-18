@@ -1,0 +1,16 @@
+-- View all records in the table
+SELECT * 
+FROM public.my_blog_post
+ORDER BY id ASC;
+
+-- Reset the sequence for the 'id' column to start from the maximum value + 1
+DO $$ 
+BEGIN
+    IF EXISTS (
+        SELECT 1 
+        FROM information_schema.sequences 
+        WHERE sequence_name = 'my_blog_post_id_seq'
+    ) THEN
+        PERFORM setval('my_blog_post_id_seq', COALESCE((SELECT MAX(id) FROM public.my_blog_post), 0) + 1, false);
+    END IF;
+END $$;

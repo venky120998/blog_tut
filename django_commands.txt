@@ -1,0 +1,86 @@
+python -m venv env
+source env/bin/activate
+
+django-admin --version
+django-admin startproject blog_main .
+
+python manage.py runserver
+python manage.py startapp my_blog
+python manage.py makemigrations
+python manage.py migrate
+python manage.py flush (remove all the data in db)
+Own file
+python manage.py populate_posts
+
+python manage.py createsuperuser
+
+
+######## HTML ##############
+# for loading static files and how call in the placeholder
+{% load static %}
+"{% static 'blog/style.css' %}"
+
+# for dynamic content block and endblock (content is name any name can be given for other files extends it)
+{% extends 'blog/base.html' %}
+{% block content %}
+{% endblock %}
+
+# in base html file for reference
+    <!-- Dynamic Content -->
+    {% block content %}
+    {% endblock %}
+
+# include other file content
+{% include 'blog/includes/header.html' %}
+
+
+# variable interpolation
+def index(request):
+    blog_title = "Venky's Blog"
+    return render(request=request, template_name='blog/index.html', context={'blog_post': blog_title})
+{{blog post}}
+
+{{blog_post | default:Document }}
+{{post.created_at | date:"F j, Y"}}
+| length, upper truncatewords:1
+
+
+# for
+{% for post in posts %}
+{{post.title}}
+{% endfor %}
+
+# if
+{% if posts %}
+{% else %}
+{% endif %}
+
+# URL
+"{% url "my_blog:detail" post_id=post.id %}  
+## my_blog-> app_name post_id(params)->path(route="post/<str:post_id>",.....)
+
+# pagination
+refer index.html
+
+#######  form
+{% csrf_token %}
+
+<!-- Error messages -->
+{% for field in form  %}
+    {% if field.errors %}
+        <div class="col-12">
+            <span class="fw-bold"> {{field.label_tag}} </span>
+            {% for error in field.errors %}
+            <span class="text-danger"> {{error}} </span>
+            {% endfor %}
+        </div>
+    {% endif %}
+               
+{% endfor %}
+            
+<!-- Success message -->
+{% if success_message %}
+        <div class="alert alert-success" role="alert">
+            {{success_message}}
+        </div>
+{% endif %}

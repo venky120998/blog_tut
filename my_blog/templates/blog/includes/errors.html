@@ -23,7 +23,7 @@
 <!-- success-->
 {% if messages %}
     {% for message in messages %}
-        <div class="alert alert-success">
+        <div class="alert {% if message.tags == 'success' %} alert-success {% else %} alert-danger {% endif %}" role="alert">
             {{ message }}
         </div>
     {% endfor %}

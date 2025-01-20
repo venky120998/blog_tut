@@ -2,12 +2,19 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.urls import reverse
 from my_blog.models import Post, AboutUs
-from my_blog.forms import ContactForm, RegisterForm, LoginForm
+from my_blog.forms import ContactForm, RegisterForm, LoginForm, ForgotPasswordForm, ResetPasswordForm
 from django.http import Http404
 import logging
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.contrib.auth import authenticate, logout, login as auth_login
+from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+from django.contrib.sites.shortcuts import get_current_site
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
 
 # Create your views here.
 
@@ -108,3 +115,74 @@ def dashboard(request):
 def logout_view(request):
     logout(request=request)
     return redirect(to="my_blog:index")
+
+def forgot_password(request):
+    # Initialize an empty form for the forgot password page
+    form = ForgotPasswordForm()
+
+    # Check if the request is a POST request (form submission)
+    if request.method == 'POST':
+        # Reinitialize the form with data from the request (submitted form data)
+        form = ForgotPasswordForm(request.POST)
+
+        # Validate the form to ensure all required fields are filled and correct
+        if form.is_valid():
+            # Extract the email address submitted by the user
+            email = form.cleaned_data['email']
+
+            # Fetch the user object corresponding to the email address
+            user = User.objects.get(email=email)
+
+            # Generate a secure token for the user to reset their password
+            token = default_token_generator.make_token(user)
+
+            # Encode the user's primary key (ID) in a secure format
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+            # Get the current site (domain name) for including in the email
+            current_site = get_current_site(request)
+            domain = current_site.domain
+
+            # Define the subject of the email
+            subject = "Reset Password Requested"
+
+            # Render the email template with required context (domain, uid, token)
+            message = render_to_string('blog/reset_password_email.html', {
+                'domain': domain,  # Website domain (e.g., example.com)
+                'uid': uid,        # Encoded user ID
+                'token': token     # Password reset token
+            })
+
+            # Send the reset password email to the user
+            send_mail(subject, message, '"no_reply@venky.com"', [email])
+
+            # Display a success message to the user
+            messages.success(request, 'Email has been sent')
+
+    # Render the forgot password page with the form (either empty or pre-filled on error)
+    return render(request, 'blog/forgot_password.html', {'form': form})
+
+def reset_password(request, uidb64, token):
+    form = ResetPasswordForm()
+    if request.method == 'POST':
+        #form
+        form = ResetPasswordForm(request.POST)
+        if form.is_valid():
+            new_password = form.cleaned_data['new_password']
+            try:
+                uid = urlsafe_base64_decode(uidb64)
+                user = User.objects.get(pk=uid)
+            except(TypeError, ValueError, OverflowError, User.DoesNotExist):
+                user = None
+
+            if user is not None and default_token_generator.check_token(user, token):
+                user.set_password(new_password)
+                user.save()
+                messages.success(request, 'Your password has been reset successfully!')
+                return redirect('my_blog:login')
+            else :
+                messages.error(request,'The password reset link is invalid')
+
+    return render(request,'blog/reset_password.html', {'form': form})
+
+

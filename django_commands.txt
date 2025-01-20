@@ -90,3 +90,6 @@ refer index.html
 {% if user.is_authenticated%}
 {% else %}
 {% endif %}
+
+## {% autoescape off %} not to consider var as string in mail
+{% endautoescape %}

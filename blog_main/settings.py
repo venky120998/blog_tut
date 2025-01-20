@@ -49,6 +49,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'blog_main.middleware.RedirectAuthenticatedUserMiddleware',
+    'blog_main.middleware.RedirectUnAuthenticatedUserMiddleware'
 ]
 
 ROOT_URLCONF = 'blog_main.urls'
@@ -145,3 +147,11 @@ LOGGING = {
         "level": "DEBUG",
     },
 }
+
+DEFAULT_FROM_MAIL = 'no_reply@venky.com'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = '660d1450a2426e'
+EMAIL_HOST_PASSWORD = 'e651ff2289e72b'

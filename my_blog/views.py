@@ -2,11 +2,12 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.urls import reverse
 from my_blog.models import Post, AboutUs
-from my_blog.forms import ContactForm, RegisterForm
+from my_blog.forms import ContactForm, RegisterForm, LoginForm
 from django.http import Http404
 import logging
 from django.core.paginator import Paginator
 from django.contrib import messages
+from django.contrib.auth import authenticate, logout, login as auth_login
 
 # Create your views here.
 
@@ -65,7 +66,6 @@ def contact(request):
     return render(request,'blog/contact.html')
 
 def about(request):
-
     about_content = AboutUs.objects.first()
     if about_content is None or not about_content.content:
         about_content = "Default Content goes here!!!"
@@ -83,4 +83,28 @@ def register_view(request):
             user.save()  # user data is created
             messages.success(request, 'Registration successful! You can now log in.')
             print("Registration Successful")
+            return redirect(to='my_blog:login')
     return render(request=request, template_name='blog/register.html', context={'form': form})
+
+def login(request):
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                auth_login(request=request, user=user)
+                return redirect(to='my_blog:dashboard')
+    else:
+        form = LoginForm()
+    
+    return render(request, 'blog/login.html', {'form': form})
+
+def dashboard(request):
+    blog_title = "My Posts"
+    return render(request=request, template_name='blog/dashboard.html', context={'blog_title': blog_title})
+
+def logout_view(request):
+    logout(request=request)
+    return redirect(to="my_blog:index")

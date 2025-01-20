@@ -84,3 +84,9 @@ refer index.html
             {{success_message}}
         </div>
 {% endif %}
+
+
+##### Auth links(eg header.thml)
+{% if user.is_authenticated%}
+{% else %}
+{% endif %}

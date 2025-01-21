@@ -16,6 +16,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from django.core.mail import send_mail
 from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.models import Group
 
 # Create your views here.
 
@@ -35,7 +36,10 @@ def index(request):
     page_object = paginator.get_page(number=page_no)
     return render(request=request, template_name='blog/index.html', context={'blog_title': blog_title, 'page_obj': page_object})
 
-def detail(requset, slug):
+def detail(request, slug):
+    if request.user and not request.user.has_perm('blog.view_post'):
+        messages.error(request, 'You have no permission to view any posts')
+        return redirect('my_blog:index')
     # static data
     #post = next((item for item in posts if item['id'] == int(post_id)), None)
     
@@ -47,7 +51,7 @@ def detail(requset, slug):
         raise Http404("Post does not exist")
     #logger = logging.getLogger("TESTING")
     #logger.debug(f"Post variable is {post}")
-    return render(request=requset, template_name='blog/details.html', context={'post': post, 'related_posts': related_posts})
+    return render(request=request, template_name='blog/details.html', context={'post': post, 'related_posts': related_posts})
 
 def old_url_redirect(request):
     return redirect(to=reverse(viewname='my_blog:new_page'))      # name from url page
@@ -89,6 +93,9 @@ def register_view(request):
             user = form.save(commit=False)
             user.set_password(form.cleaned_data['password'])  # hash the password
             user.save()  # user data is created
+            # add user to readers group
+            readers_group,created = Group.objects.get_or_create(name="Readers")
+            user.groups.add(readers_group)
             messages.success(request, 'Registration successful! You can now log in.')
             print("Registration Successful")
             return redirect(to='my_blog:login')
@@ -194,7 +201,8 @@ def reset_password(request, uidb64, token):
 
     return render(request,'blog/reset_password.html', {'form': form})
 
-@login_required
+@login_required 
+@permission_required(perm='blog.add_post', raise_exception=True)
 def new_post(request):
     categories = Category.objects.all()
     form = PostForm()
@@ -209,6 +217,7 @@ def new_post(request):
     return render(request,'blog/new_post.html', {'categories': categories, 'form': form})
 
 @login_required
+@permission_required('blog.change_post', raise_exception=True)
 def edit_post(request, post_id):
     categories = Category.objects.all()
     post = get_object_or_404(Post, id=post_id)
@@ -224,6 +233,7 @@ def edit_post(request, post_id):
     return render(request,'blog/edit_post.html', {'categories': categories, 'post': post, 'form': form})
 
 @login_required
+@permission_required('blog.delete_post', raise_exception=True)
 def delete_post(request, post_id):
     post = get_object_or_404(Post, id=post_id)
     post.delete()
@@ -231,6 +241,7 @@ def delete_post(request, post_id):
     return redirect('my_blog:dashboard')
 
 @login_required
+@permission_required('blog.can_publish', raise_exception=True)
 def publish_post(request, post_id):
     post = get_object_or_404(Post, id=post_id)
     post.is_published = True

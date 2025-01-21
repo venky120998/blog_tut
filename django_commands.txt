@@ -93,3 +93,5 @@ refer index.html
 
 ## {% autoescape off %} not to consider var as string in mail
 {% endautoescape %}
+
+{% empty %}

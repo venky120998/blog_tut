@@ -1,8 +1,8 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponse
 from django.urls import reverse
-from my_blog.models import Post, AboutUs
-from my_blog.forms import ContactForm, RegisterForm, LoginForm, ForgotPasswordForm, ResetPasswordForm
+from my_blog.models import Post, AboutUs, Category
+from my_blog.forms import ContactForm, RegisterForm, LoginForm, ForgotPasswordForm, ResetPasswordForm, PostForm
 from django.http import Http404
 import logging
 from django.core.paginator import Paginator
@@ -15,6 +15,7 @@ from django.utils.encoding import force_bytes
 from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from django.core.mail import send_mail
+from django.contrib.auth.decorators import login_required, permission_required
 
 # Create your views here.
 
@@ -27,7 +28,7 @@ from django.core.mail import send_mail
 def index(request):
     blog_title = "Venky's Blog"
     # getting data from post model
-    all_posts = Post.objects.all().order_by("created_at")
+    all_posts = Post.objects.filter(is_published=True).order_by("created_at")
     # pagenate
     paginator = Paginator(object_list=all_posts, per_page=5)
     page_no = request.GET.get('page')
@@ -110,7 +111,15 @@ def login(request):
 
 def dashboard(request):
     blog_title = "My Posts"
-    return render(request=request, template_name='blog/dashboard.html', context={'blog_title': blog_title})
+    #getting user posts
+    all_posts = Post.objects.filter(user=request.user)
+
+    # paginate
+    paginator = Paginator(all_posts, 5)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request,'blog/dashboard.html', {'blog_title': blog_title, 'page_obj': page_obj})
 
 def logout_view(request):
     logout(request=request)
@@ -185,4 +194,46 @@ def reset_password(request, uidb64, token):
 
     return render(request,'blog/reset_password.html', {'form': form})
 
+@login_required
+def new_post(request):
+    categories = Category.objects.all()
+    form = PostForm()
+    if request.method == 'POST':
+        #form
+        form = PostForm(request.POST, request.FILES)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.user = request.user
+            post.save()
+            return redirect('my_blog:dashboard')
+    return render(request,'blog/new_post.html', {'categories': categories, 'form': form})
 
+@login_required
+def edit_post(request, post_id):
+    categories = Category.objects.all()
+    post = get_object_or_404(Post, id=post_id)
+    form = PostForm()
+    if request.method == "POST":
+        #form
+        form = PostForm(request.POST, request.FILES, instance=post)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Post Updated Succesfully!')
+            return redirect('my_blog:dashboard')
+
+    return render(request,'blog/edit_post.html', {'categories': categories, 'post': post, 'form': form})
+
+@login_required
+def delete_post(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+    post.delete()
+    messages.success(request, 'Post deleted Succesfully!')
+    return redirect('my_blog:dashboard')
+
+@login_required
+def publish_post(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+    post.is_published = True
+    post.save()
+    messages.success(request, 'Post Published Succesfully!')
+    return redirect('my_blog:dashboard')
